@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: always
+    environment:
+      - POSTGRES_HOST=localhost
+      - POSTGRES_USER=${POSTGRES_USER_DEV}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_DEV}
+      - POSTGRES_DB=${POSTGRES_DB_DEV}
+      - POSTGRES_NON_ROOT_USER=${POSTGRES_NON_ROOT_USER_DEV}
+      - POSTGRES_NON_ROOT_PASSWORD=${POSTGRES_NON_ROOT_PASSWORD_DEV}
+    volumes:
+      - netproject_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h localhost -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - 5411:5432
+
+  # backend-app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   command: yarn run start
+  #   ports:
+  #     - "3005:3000"
+  #   environment:
+  #     - DATABASE_HOST=postgres
+  #     - DATABASE_PORT=5432
+  #     - DATABASE_USER=${POSTGRES_USER_DEV}
+  #     - DATABASE_PASSWORD=${POSTGRES_PASSWORD_DEV}
+  #     - DATABASE_NAME=${POSTGRES_DB_DEV}
+  #   depends_on:
+  #     - postgres
+
+  # nginx:
+  #   image: nginx:alpine
+  #   ports:
+  #     - "80:80"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #   depends_on:
+  #     - backend-app
+  #     - postgres
+
+volumes:
+  netproject_data:
