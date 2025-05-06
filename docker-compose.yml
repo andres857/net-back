@@ -1,49 +1,78 @@
 services:
   postgres:
     image: postgres:16
-    restart: always
+    restart: unless-stopped
+    profiles: ["dev"]
     environment:
-      - POSTGRES_HOST=localhost
+      - POSTGRES_HOST=${POSTGRES_HOST_DEV}
+      - POSTGRES_DB=${POSTGRES_DB_DEV}
       - POSTGRES_USER=${POSTGRES_USER_DEV}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_DEV}
-      - POSTGRES_DB=${POSTGRES_DB_DEV}
       - POSTGRES_NON_ROOT_USER=${POSTGRES_NON_ROOT_USER_DEV}
       - POSTGRES_NON_ROOT_PASSWORD=${POSTGRES_NON_ROOT_PASSWORD_DEV}
     volumes:
-      - netproject_data:/var/lib/postgresql/data
+      - cmsproject_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -h localhost -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      test: ['CMD-SHELL', 'pg_isready -h ${POSTGRES_HOST_DEV} -U ${POSTGRES_USER_DEV} -d ${POSTGRES_DB_DEV}']
       interval: 5s
       timeout: 5s
       retries: 10
     ports:
       - 5411:5432
+    networks:
+      - cms
 
-  # backend-app:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   command: yarn run start
-  #   ports:
-  #     - "3005:3000"
-  #   environment:
-  #     - DATABASE_HOST=postgres
-  #     - DATABASE_PORT=5432
-  #     - DATABASE_USER=${POSTGRES_USER_DEV}
-  #     - DATABASE_PASSWORD=${POSTGRES_PASSWORD_DEV}
-  #     - DATABASE_NAME=${POSTGRES_DB_DEV}
-  #   depends_on:
-  #     - postgres
+  app-nestjs-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development 
+    command: yarn start:dev 
+    profiles: ["dev"]
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - APP_PORT=${APP_PORT}
+      - DATABASE_PORT=5432
+      - DATABASE_HOST=${POSTGRES_HOST_DEV}
+      - DATABASE_NAME=${POSTGRES_DB_DEV}
+      - DATABASE_USER=${POSTGRES_USER_DEV}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD_DEV}
+    volumes:
+      - ./:/usr/src/app
+      - /usr/src/app/node_modules
+    ports:
+        - "${HOST_PORT}:3000"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+    networks:
+      - cms
 
-  # nginx:
-  #   image: nginx:alpine
-  #   ports:
-  #     - "80:80"
-  #   volumes:
-  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
-  #   depends_on:
-  #     - backend-app
-  #     - postgres
+  app-nestjs-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production 
+    # 'command' no es necesario, se usa el CMD del Dockerfile
+    profiles: ["prod"]
+    restart: unless-stopped
+    # NO montar volúmenes de código fuente en producción
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+    networks:
+      - cms
 
 volumes:
-  netproject_data:
+  cmsproject_data:
+
+networks:
+  cms:
+    external: true
