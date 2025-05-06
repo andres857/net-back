@@ -60,13 +60,42 @@ services:
     restart: unless-stopped
     # NO montar volúmenes de código fuente en producción
     ports:
-      - "3000:3000"
+      - "${HOST_PORT}:3000"
     environment:
-      - NODE_ENV=production 
+      - NODE_ENV=production
+      - APP_PORT=${APP_PORT}
+      - DATABASE_PORT=5432
+      - DATABASE_HOST=${POSTGRES_HOST}
+      - DATABASE_NAME=${POSTGRES_DB}
+      - DATABASE_USER=${POSTGRES_USER}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD}
     logging:
       driver: "json-file"
       options:
         max-size: "5m"
+    networks:
+      - cms
+
+  postgres-prod:
+    image: postgres:16
+    restart: unless-stopped
+    profiles: ["prod"]
+    environment:
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_NON_ROOT_USER=${POSTGRES_NON_ROOT_USER}
+      # - POSTGRES_NON_ROOT_PASSWORD=${POSTGRES_NON_ROOT_PASSWORD_DEV}
+    volumes:
+      - cmsproject_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h ${POSTGRES_HOST_DEV} -U ${POSTGRES_USER_DEV} -d ${POSTGRES_DB_DEV}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5430:5432"
     networks:
       - cms
 
